@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grocery Notes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -441,6 +442,20 @@
             font-weight: 700;
             text-align: center;
         }
+
+        /* Drag & Drop Smoothness Styles */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #e5e7eb;
+            border: 2px dashed #9ca3af;
+        }
+        
+        .sortable-drag {
+            background: white;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: scale(1.02);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -589,27 +604,46 @@
         // Initialize
         renderItems();
 
+        // Initialize Drag & Drop (Smoother)
+        const el = document.getElementById('itemsContainer');
+        Sortable.create(el, {
+            animation: 350, // Thoda slow aur smooth animation
+            handle: '.item-card', 
+            delay: 150, // Mobile pe galti se drag na ho
+            delayOnTouchOnly: true,
+            ghostClass: 'sortable-ghost', // Khaali jagah ka style
+            dragClass: 'sortable-drag',   // Udte hue card ka style
+            filter: '.hidden-section',
+            forceFallback: false, // Native scroll performance better rahegi
+            onEnd: function (evt) {
+                const item = items.splice(evt.oldIndex, 1)[0];
+                items.splice(evt.newIndex, 0, item);
+                localStorage.setItem('groceryItems', JSON.stringify(items));
+            }
+        });
+
         // Quick Add Function (Fixed for Search Input)
         function handleQuickAdd(event) {
             if (event.key === 'Enter') {
                 const input = document.getElementById('searchInput');
                 const name = input.value.trim();
                 if (name) {
-                    addItem(name);
+                    // New: Add as Purchased (True)
+                    addItem(name, '', '', true);
                     input.value = '';
-                    renderItems(); // Naya item add hone ke baad list update karein
+                    renderItems(); 
                 }
             }
         }
 
-        // Add Item (Quick)
-        function addItem(name, price = '', weight = '') {
+        // Add Item (Quick - Auto Top)
+        function addItem(name, price = '', weight = '', purchased = false) {
             const newItem = {
                 id: Date.now(),
                 name: name,
                 price: price,
                 weight: weight,
-                purchased: false,
+                purchased: purchased,
                 hidden: false,
                 priceHistory: price ? [{
                     price: price,
@@ -698,11 +732,20 @@
             saveAndRender();
         }
 
-        // Toggle Purchase Status
+        // Toggle Purchase Status (Auto Move to Top)
         function togglePurchase(id) {
-            const item = items.find(i => i.id === id);
-            item.purchased = !item.purchased;
-            saveAndRender();
+            const index = items.findIndex(i => i.id === id);
+            if (index > -1) {
+                const item = items[index];
+                item.purchased = !item.purchased;
+                
+                // Agar tick kiya, to sabse upar bhej do
+                if (item.purchased) {
+                    items.splice(index, 1); // Wahan se hatao
+                    items.unshift(item);    // Top pe lagao
+                }
+                saveAndRender();
+            }
         }
 
         // Toggle Price History & Close Menu
@@ -780,7 +823,7 @@
         // Create Item HTML (Perfect Column Alignment)
         function createItemHTML(item) {
             return `
-                <div class="item-card ${item.purchased ? 'purchased' : ''} ${item.hidden ? 'hidden' : ''}">
+                <div class="item-card ${item.purchased ? 'purchased' : ''} ${item.hidden ? 'hidden' : ''}" data-id="${item.id}">
                     <div class="item-main">
                         <!-- Left Column: Item -->
                         <div class="item-info" style="display: flex; align-items: center; gap: 12px; flex: 2; min-width: 0;" onclick="togglePurchase(${item.id})">
