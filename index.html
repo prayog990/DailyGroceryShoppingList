@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery Notes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f0f2f5;
+            padding-bottom: 100px;
+            color: #1a1a1a;
+        }
+
+        .header {
+            background: #10b981;
+            color: white;
+            padding: 20px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .share-btn {
+            background: #ffffff;
+            color: #10b981;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .search-section {
+            background: white;
+            padding: 12px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-bar-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-bar-wrapper input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .search-bar-wrapper::before {
+            content: '🔍';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+        }
+
+        /* Table Headers Style (Alignment & Hierarchy Fix) */
+        .list-labels {
+            display: flex;
+            padding: 15px 16px 8px 16px;
+            font-size: 11px; /* Hierarchy: Smaller headers */
+            font-weight: 600;
+            color: #9ca3af; /* Hierarchy: Lighter grey */
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+        }
+
+        /* Padding adjusted to align perfectly with name text (after checkbox) */
+        .label-item { flex: 2; padding-left: 42px; } 
+        .label-qty { flex: 1; text-align: center; padding-right: 15px; }
+        .label-price { flex: 1; text-align: right; padding-right: 40px; }
+
+        .quick-add input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+
+        .items-container {
+            padding: 12px 16px;
+        }
+
+        :root {
+            --primary-color: #10b981;
+            --item-font-size: 17px;
+            --card-radius: 12px;
+            --item-bg: #ffffff;
+            --item-spacing: 0px;
+            --row-height: 0px; /* Default set to minimum */
+        }
+
+        /* MASTER LIST STATE (Background & Box Removed) */
+        .item-card {
+            background: transparent; /* Background removed */
+            border-radius: var(--card-radius);
+            margin-bottom: var(--item-spacing);
+            box-shadow: none; /* Box shadow removed */
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .item-card.purchased {
+            box-shadow: none; /* No shadow even when selected */
+        }
+
+        .item-main {
+            display: flex;
+            align-items: center;
+            padding: var(--row-height) 12px;
+            gap: 12px;
+            border-bottom: 1px solid rgba(0,0,0,0.05); /* Minimal separator line */
+        }
+
+        /* User-Friendly Color Selector */
+        .color-grid-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .preset-colors {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .color-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: 0.2s;
+        }
+        .color-dot:active { transform: scale(0.9); }
+
+        .hex-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f3f4f6;
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .hex-input-group span { font-size: 14px; font-weight: bold; color: #6b7280; }
+        .hex-input-group input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 14px;
+            font-family: monospace;
+            outline: none;
+            color: #1a1a1a;
+        }
+
+        .weight-badge {
+            font-size: var(--item-font-size);
+            color: #374151;
+            padding: 0; /* Badge look removed */
+            font-weight: 500;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .weight-badge:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        /* Admin Panel Styles */
+        #adminPanel .modal-content {
+            border-top: 5px solid var(--primary-color);
+        }
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .checkbox {
+            width: 18px; /* Small and subtle */
+            height: 18px;
+            min-width: 18px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .checkbox.checked {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 17px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 2px;
+            transition: all 0.3s;
+        }
+
+        /* Highlighted Text (Name & Qty Highlighted) */
+        .item-card.purchased .item-name,
+        .item-card.purchased .weight-badge {
+            text-decoration: none;
+            color: var(--primary-color);
+            font-weight: 700; /* Both Name and Qty become Bold */
+        }
+
+        .item-price {
+            font-size: 14px;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .price-amount {
+            font-size: var(--item-font-size);
+            color: #374151;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        .item-right-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .price-clickable {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .price-clickable:hover {
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .kebab-menu-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            color: #6b7280;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .kebab-menu-btn:hover {
+            background: #f3f4f6;
+        }
+
+        /* Dropdown Menu Styling */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 40px;
+            background: white;
+            min-width: 150px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            z-index: 200;
+            border: 1px solid #f3f4f6;
+            overflow: hidden;
+        }
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #f9fafb;
+            color: #10b981;
+        }
+
+        .price-history {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: #f9fafb;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .price-history.open { max-height: 400px; }
+
+        .history-header {
+            padding: 12px 16px;
+            font-weight: 700;
+            color: #374151;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .history-item {
+            padding: 3px 16px; /* Ultra-compact spacing */
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 13px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .btn-save { background: #10b981; color: white; }
+
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 25px;
+            width: 64px;
+            height: 64px;
+            background: #10b981;
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 32px;
+            box-shadow: 0 12px 24px rgba(16, 185, 129, 0.3);
+            z-index: 99;
+        }
+
+        .empty-state {
+            margin-top: 80px;
+            text-align: center;
+            color: #9ca3af;
+        }
+
+        .hidden-section {
+            margin-top: 30px;
+            border-top: 2px dashed #d1d5db;
+        }
+
+        .hidden-header {
+            padding: 16px;
+            color: #6b7280;
+            font-weight: 700;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1 onclick="handleTitleClick()">🛒 Grocery List</h1>
+        <button class="share-btn" onclick="shareToWhatsApp()">
+            <span style="font-size: 18px;">💬</span> Share List
+        </button>
+    </div>
+
+    <!-- Hidden Admin Panel -->
+    <div class="modal" id="adminPanel">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+            <div class="modal-title">🎨 Premium UI Settings</div>
+            <div class="admin-grid">
+                <!-- Spacing Section -->
+                <div class="form-group">
+                    <label>Card Gap (Outer)</label>
+                    <input type="range" min="0" max="20" value="0" oninput="updateUI('spacing', this.value + 'px')">
+                </div>
+                <div class="form-group">
+                    <label>Row Height (Inner)</label>
+                    <input type="range" min="0" max="50" value="0" oninput="updateUI('rowHeight', this.value + 'px')">
+                </div>
+                <div class="form-group">
+                    <label>Box Shape</label>
+                    <input type="range" min="0" max="30" value="12" oninput="updateUI('radius', this.value + 'px')">
+                </div>
+                <div class="form-group">
+                    <label>Text Size</label>
+                    <input type="range" min="12" max="24" value="17" oninput="updateUI('font', this.value + 'px')">
+                </div>
+
+                <!-- Color Section (Grid Format) -->
+                <div class="form-group">
+                    <label>Theme Color</label>
+                    <div class="color-grid-container">
+                        <div class="preset-colors">
+                            <div class="color-dot" style="background:#10b981" onclick="updateUI('color','#10b981')"></div>
+                            <div class="color-dot" style="background:#3b82f6" onclick="updateUI('color','#3b82f6')"></div>
+                            <div class="color-dot" style="background:#f43f5e" onclick="updateUI('color','#f43f5e')"></div>
+                            <div class="color-dot" style="background:#8b5cf6" onclick="updateUI('color','#8b5cf6')"></div>
+                            <div class="color-dot" style="background:#f59e0b" onclick="updateUI('color','#f59e0b')"></div>
+                        </div>
+                        <div class="hex-input-group">
+                            <span>#</span>
+                            <input type="text" placeholder="Custom Hex (e.g. 10b981)" oninput="updateUI('color', '#' + this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Item Box BG</label>
+                    <div class="color-grid-container">
+                        <div class="preset-colors">
+                            <div class="color-dot" style="background:#ffffff" onclick="updateUI('itemBg','#ffffff')"></div>
+                            <div class="color-dot" style="background:#f9fafb" onclick="updateUI('itemBg','#f9fafb')"></div>
+                            <div class="color-dot" style="background:#f3f4f6" onclick="updateUI('itemBg','#f3f4f6')"></div>
+                            <div class="color-dot" style="background:#ecfdf5" onclick="updateUI('itemBg','#ecfdf5')"></div>
+                            <div class="color-dot" style="background:#e0f2fe" onclick="updateUI('itemBg','#e0f2fe')"></div>
+                        </div>
+                        <div class="hex-input-group">
+                            <span>#</span>
+                            <input type="text" placeholder="Custom Hex (e.g. ffffff)" oninput="updateUI('itemBg', '#' + this.value)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-save" onclick="closeAdmin()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar Section -->
+    <div class="search-section">
+        <div class="search-bar-wrapper">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search or add item..."
+                oninput="renderItems()"
+                onkeypress="handleQuickAdd(event)"
+            >
+        </div>
+    </div>
+
+    <!-- Labels Header -->
+    <div class="list-labels">
+        <span class="label-item">Item</span>
+        <span class="label-qty">Qty</span>
+        <span class="label-price">Last Price</span>
+    </div>
+
+    <!-- Items Container -->
+    <div class="items-container" id="itemsContainer">
+        <!-- Items will be rendered here -->
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="openAddModal()">+</button>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content" style="text-align: center;">
+            <div style="font-size: 50px; margin-bottom: 10px;">🗑️</div>
+            <div class="modal-title">Delete Item?</div>
+            <p style="color: #6b7280; margin-bottom: 24px;">Kya aap waqai is item ko list se hatana chahte hain?</p>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button class="modal-btn" style="background: #ef4444; color: white;" onclick="confirmDelete()">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Add Modal -->
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">Add New Item</div>
+            <div class="form-group" id="nameGroup">
+                <label>Item Name *</label>
+                <input type="text" id="itemName" placeholder="e.g., Atta, Rice">
+            </div>
+            <div class="form-group" id="priceGroup">
+                <label>Price (₹)</label>
+                <input type="number" id="itemPrice" placeholder="e.g., 500">
+            </div>
+            <div class="form-group" id="qtyGroup">
+                <label>Weight/Quantity</label>
+                <input type="text" id="itemWeight" placeholder="e.g., 10kg, 1L">
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn btn-save" onclick="saveItem()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Structure
+        let items = JSON.parse(localStorage.getItem('groceryItems')) || [];
+        let currentEditId = null;
+        let itemToDeleteId = null;
+
+        // Initialize
+        renderItems();
+
+        // Quick Add Function (Fixed for Search Input)
+        function handleQuickAdd(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('searchInput');
+                const name = input.value.trim();
+                if (name) {
+                    addItem(name);
+                    input.value = '';
+                    renderItems(); // Naya item add hone ke baad list update karein
+                }
+            }
+        }
+
+        // Add Item (Quick)
+        function addItem(name, price = '', weight = '') {
+            const newItem = {
+                id: Date.now(),
+                name: name,
+                price: price,
+                weight: weight,
+                purchased: false,
+                hidden: false,
+                priceHistory: price ? [{
+                    price: price,
+                    weight: weight,
+                    date: new Date().toISOString()
+                }] : []
+            };
+            items.push(newItem);
+            saveAndRender();
+        }
+
+        // Open Add Modal (Now hides Price field)
+        function openAddModal() {
+            currentEditId = null;
+            document.getElementById('modalTitle').textContent = 'Add New Item';
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemPrice').value = '';
+            document.getElementById('itemWeight').value = '';
+            
+            // UI Toggle: Only show Name and Qty for new items
+            document.getElementById('nameGroup').style.display = 'block';
+            document.getElementById('priceGroup').style.display = 'none';
+            document.getElementById('qtyGroup').style.display = 'block';
+            
+            document.getElementById('itemModal').classList.add('active');
+        }
+
+        // Modes: 'full', 'qty', 'price'
+        let editMode = 'full';
+
+        function openEditModal(id, mode = 'full') {
+            currentEditId = id;
+            editMode = mode;
+            const item = items.find(i => i.id === id);
+            
+            // UI Toggle
+            document.getElementById('nameGroup').style.display = (mode === 'full') ? 'block' : 'none';
+            document.getElementById('priceGroup').style.display = (mode === 'full' || mode === 'price') ? 'block' : 'none';
+            document.getElementById('qtyGroup').style.display = (mode === 'full' || mode === 'qty') ? 'block' : 'none';
+            
+            document.getElementById('modalTitle').textContent = mode === 'qty' ? 'Update Quantity' : (mode === 'price' ? 'Update Price' : 'Edit Item');
+            
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemPrice').value = item.price;
+            document.getElementById('itemWeight').value = item.weight;
+            document.getElementById('itemModal').classList.add('active');
+        }
+
+        // Close Modal
+        function closeModal() {
+            document.getElementById('itemModal').classList.remove('active');
+        }
+
+        // Save Item (Fixed Qty Update)
+        function saveItem() {
+            const name = document.getElementById('itemName').value.trim();
+            const price = document.getElementById('itemPrice').value.trim();
+            const weight = document.getElementById('itemWeight').value.trim();
+
+            if (!name) {
+                alert('Please enter item name');
+                return;
+            }
+
+            if (currentEditId) {
+                const item = items.find(i => i.id === currentEditId);
+                item.name = name;
+                
+                // Price History Logic
+                if (price !== "" && price !== item.price) {
+                    item.priceHistory.push({
+                        price: price,
+                        weight: weight,
+                        date: new Date().toISOString()
+                    });
+                }
+                
+                // Always update these fields
+                item.price = price;
+                item.weight = weight;
+            } else {
+                addItem(name, price, weight);
+            }
+
+            closeModal();
+            saveAndRender();
+        }
+
+        // Toggle Purchase Status
+        function togglePurchase(id) {
+            const item = items.find(i => i.id === id);
+            item.purchased = !item.purchased;
+            saveAndRender();
+        }
+
+        // Toggle Price History & Close Menu
+        function toggleHistory(id) {
+            const historyEl = document.getElementById(`history-${id}`);
+            if (historyEl) {
+                historyEl.classList.toggle('open');
+            }
+            // Close the menu after clicking
+            const menu = document.getElementById(`menu-${id}`);
+            if (menu) menu.classList.remove('show');
+        }
+
+        // Toggle Hidden Status
+        function toggleHidden(id) {
+            const item = items.find(i => i.id === id);
+            item.hidden = !item.hidden;
+            saveAndRender();
+        }
+
+        // Custom Delete Logic
+        function deleteItem(id) {
+            itemToDeleteId = id;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            itemToDeleteId = null;
+        }
+
+        function confirmDelete() {
+            if (itemToDeleteId) {
+                items = items.filter(i => i.id !== itemToDeleteId);
+                saveAndRender();
+                closeDeleteModal();
+            }
+        }
+
+        // Render Items with Search
+        function renderItems() {
+            const container = document.getElementById('itemsContainer');
+            const searchInput = document.getElementById('searchInput');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+            
+            // Filter items based on search term
+            const filtered = items.filter(item => 
+                item.name.toLowerCase().includes(searchTerm)
+            );
+
+            const visibleItems = filtered.filter(i => !i.hidden);
+            const hiddenItems = filtered.filter(i => i.hidden);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-text">${searchTerm ? 'No matching items found' : 'No items yet. Add one!'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = visibleItems.map(item => createItemHTML(item)).join('');
+
+            if (hiddenItems.length > 0) {
+                html += `<div class="hidden-section">
+                    <div class="hidden-header">Hidden Items (${hiddenItems.length})</div>
+                    ${hiddenItems.map(item => createItemHTML(item)).join('')}
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Create Item HTML (Perfect Column Alignment)
+        function createItemHTML(item) {
+            return `
+                <div class="item-card ${item.purchased ? 'purchased' : ''} ${item.hidden ? 'hidden' : ''}">
+                    <div class="item-main">
+                        <!-- Left Column: Item -->
+                        <div class="item-info" style="display: flex; align-items: center; gap: 12px; flex: 2; min-width: 0;" onclick="togglePurchase(${item.id})">
+                            <div class="checkbox ${item.purchased ? 'checked' : ''}"></div>
+                            <div class="item-name" style="font-size: var(--item-font-size); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</div>
+                        </div>
+
+                        <!-- Center Column: Quantity -->
+                        <div style="flex: 1; text-align: center; min-width: 0; padding-right: 15px;">
+                            <span class="weight-badge" onclick="openEditModal(${item.id}, 'qty')" style="display: inline-block; min-width: 30px;">
+                                ${item.weight ? item.weight : '-'}
+                            </span>
+                        </div>
+                        
+                        <!-- Right Column: Last Price & Menu -->
+                        <div class="item-right-section" style="flex: 1; justify-content: flex-end; gap: 5px; min-width: 0;" onclick="event.stopPropagation()">
+                            <div class="price-clickable" onclick="openEditModal(${item.id}, 'price')" style="padding: 0;">
+                                <span class="price-amount" style="font-size: var(--item-font-size); opacity: 0.8;">${item.price ? '₹' + item.price : '-'}</span>
+                            </div>
+                            <div class="kebab-menu-btn" onclick="toggleItemMenu(${item.id})" style="margin-right: -5px;">⋮</div>
+                            
+                            <div id="menu-${item.id}" class="dropdown-content">
+                                <div class="dropdown-item" onclick="toggleHistory(${item.id})">
+                                    📊 Price History
+                                </div>
+                                <div class="dropdown-item" onclick="toggleHidden(${item.id})">
+                                    ${item.hidden ? '👁️ Show Item' : '🙈 Hide Item'}
+                                </div>
+                                <div class="dropdown-item" style="color: #ef4444;" onclick="deleteItem(${item.id})">
+                                    🗑️ Delete
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ${item.priceHistory.length > 0 ? `
+                        <div class="price-history" id="history-${item.id}">
+                            <div class="history-header">Price History</div>
+                            ${item.priceHistory.slice().reverse().map((h, idx) => `
+                                <div class="history-item">
+                                    <span class="history-date">
+                                        ${idx === 0 ? 'Current' : formatDate(h.date)}
+                                    </span>
+                                    <span class="history-value">
+                                        ₹${h.price} ${h.weight ? `(${h.weight})` : ''}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Format Date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-IN', { 
+                day: 'numeric', 
+                month: 'short', 
+                year: 'numeric' 
+            });
+        }
+
+        // Share to WhatsApp (Perfect Column Alignment)
+        function shareToWhatsApp() {
+            const purchasedItems = items.filter(i => i.purchased && !i.hidden);
+            
+            if (purchasedItems.length === 0) {
+                alert('No items selected for shopping!');
+                return;
+            }
+
+            // Sabse lambe naam ki length dhundho taaki alignment thik rahe
+            const maxNameLength = Math.max(...purchasedItems.map(i => i.name.length));
+
+            let message = '🛒 *Grocery Shopping List*\n\n';
+            purchasedItems.forEach((item, idx) => {
+                // Har naam ke peeche zaruri spaces calculate karo
+                const padding = " ".repeat(maxNameLength - item.name.length + 3);
+                
+                let value = (item.weight === '*') ? `₹${item.price || '0'} ki` : (item.weight || '');
+                
+                message += `${idx + 1}. ${item.name}${padding}- ${value}\n`;
+            });
+
+            const whatsappURL = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappURL, '_blank');
+        }
+
+        // Save and Render
+        function saveAndRender() {
+            localStorage.setItem('groceryItems', JSON.stringify(items));
+            renderItems();
+        }
+
+        // Close modal on outside click
+        document.getElementById('itemModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Admin Logic
+        let titleClicks = 0;
+        function handleTitleClick() {
+            titleClicks++;
+            if (titleClicks === 6) {
+                document.getElementById('adminPanel').classList.add('active');
+                titleClicks = 0;
+            }
+            setTimeout(() => titleClicks = 0, 3000); // Reset if not clicked fast
+        }
+
+        function closeAdmin() {
+            document.getElementById('adminPanel').classList.remove('active');
+        }
+
+        function updateUI(type, value) {
+            if (type === 'color') {
+                document.documentElement.style.setProperty('--primary-color', value);
+                document.querySelector('.header').style.background = value;
+                document.querySelector('.fab').style.background = value;
+                document.querySelectorAll('.checkbox.checked').forEach(cb => cb.style.background = value);
+            }
+            if (type === 'itemBg') {
+                document.documentElement.style.setProperty('--item-bg', value);
+            }
+            if (type === 'font') {
+                document.documentElement.style.setProperty('--item-font-size', value);
+            }
+            if (type === 'radius') {
+                document.documentElement.style.setProperty('--card-radius', value);
+            }
+            if (type === 'spacing') {
+                document.documentElement.style.setProperty('--item-spacing', value);
+            }
+            if (type === 'rowHeight') {
+                document.documentElement.style.setProperty('--row-height', value);
+            }
+        }
+
+        // Toggle Menu & Exit History Logic
+        function toggleItemMenu(id) {
+            const historyEl = document.getElementById(`history-${id}`);
+            const menu = document.getElementById(`menu-${id}`);
+            
+            // 1. Agar History khuli hai, toh dots pe click karne se use band karo aur bahar aa jao
+            if (historyEl && historyEl.classList.contains('open')) {
+                historyEl.classList.remove('open');
+                if (menu) menu.classList.remove('show');
+                return; 
+            }
+
+            // 2. Agar history band hai, toh standard menu toggle karo
+            document.querySelectorAll('.dropdown-content').forEach(m => {
+                if (m.id !== `menu-${id}`) m.classList.remove('show');
+            });
+            
+            if (menu) menu.classList.toggle('show');
+        }
+
+        // Close menu when clicking anywhere else
+        window.onclick = function(event) {
+            if (!event.target.matches('.kebab-menu-btn')) {
+                document.querySelectorAll('.dropdown-content').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
