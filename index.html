@@ -443,18 +443,28 @@
             text-align: center;
         }
 
-        /* Drag & Drop Smoothness Styles */
+        /* Drag & Drop Premium Floating Effect */
         .sortable-ghost {
-            opacity: 0.4;
-            background: #e5e7eb;
-            border: 2px dashed #9ca3af;
+            opacity: 0.2;
+            background: #e5e7eb !important;
+            border: 1px solid #9ca3af !important;
+            border-radius: var(--card-radius);
         }
         
         .sortable-drag {
-            background: white;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            transform: scale(1.02);
-            opacity: 1;
+            background: #ffffff !important; /* सॉलिड बैकग्राउंड */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important; /* गहरी परछाई */
+            transform: scale(1.04) rotate(1deg) !important; /* हल्का सा तिरछा और बड़ा */
+            opacity: 1 !important;
+            z-index: 9999 !important;
+            border: 1px solid #eee !important;
+            cursor: grabbing;
+        }
+
+        /* जब कार्ड को टच किया जाए */
+        .sortable-chosen {
+            background: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
     </style>
 </head>
@@ -604,20 +614,26 @@
         // Initialize
         renderItems();
 
-        // Initialize Drag & Drop (Smoother)
+        // Initialize Drag & Drop (Ultra-Smooth Floating Effect)
         const el = document.getElementById('itemsContainer');
         Sortable.create(el, {
-            animation: 350, // Thoda slow aur smooth animation
+            animation: 200, 
             handle: '.item-card', 
-            delay: 150, // Mobile pe galti se drag na ho
+            delay: 120, 
             delayOnTouchOnly: true,
-            ghostClass: 'sortable-ghost', // Khaali jagah ka style
-            dragClass: 'sortable-drag',   // Udte hue card ka style
-            filter: '.hidden-section',
-            forceFallback: false, // Native scroll performance better rahegi
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            fallbackClass: 'sortable-drag',
+            forceFallback: true, // कार्ड को फिजिकल ड्रैग इफ़ेक्ट देगा
+            fallbackOnBody: true, // कार्ड को पूरी बॉडी के ऊपर तैरने देगा
+            swapThreshold: 0.65, // आइटम कब जगह बदलेंगे
+            filter: '.hidden-section, .dropdown-content, .kebab-menu-btn',
+            onStart: function() {
+                if (window.navigator.vibrate) window.navigator.vibrate(20); // टच पर हल्का वाइब्रेशन
+            },
             onEnd: function (evt) {
-                const item = items.splice(evt.oldIndex, 1)[0];
-                items.splice(evt.newIndex, 0, item);
+                const movedItem = items.splice(evt.oldIndex, 1)[0];
+                items.splice(evt.newIndex, 0, movedItem);
                 localStorage.setItem('groceryItems', JSON.stringify(items));
             }
         });
@@ -732,18 +748,17 @@
             saveAndRender();
         }
 
-        // Toggle Purchase Status (Auto Move to Top)
+        // Toggle Purchase Status (Auto Sorting)
         function togglePurchase(id) {
             const index = items.findIndex(i => i.id === id);
             if (index > -1) {
-                const item = items[index];
-                item.purchased = !item.purchased;
+                items[index].purchased = !items[index].purchased;
                 
-                // Agar tick kiya, to sabse upar bhej do
-                if (item.purchased) {
-                    items.splice(index, 1); // Wahan se hatao
-                    items.unshift(item);    // Top pe lagao
-                }
+                // Smart Re-sorting: Purchased items group at the top
+                const purchasedItems = items.filter(item => item.purchased);
+                const unpurchasedItems = items.filter(item => !item.purchased);
+                
+                items = [...purchasedItems, ...unpurchasedItems];
                 saveAndRender();
             }
         }
